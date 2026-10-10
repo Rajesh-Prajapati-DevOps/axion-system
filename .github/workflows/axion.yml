@@ -63,3 +63,7 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -input=false -no-color
 
+      # Step 7: infracost calculate
+      - name: infracost calculate total
+        run: infracost breakdown --path ./environments/preprod
+
