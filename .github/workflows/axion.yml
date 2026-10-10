@@ -42,34 +42,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Debug directory and Terraform files
-      - name: Verify Terraform Directory
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in current directory:"
-          ls -la
-          echo "Terraform files:"
-          find . -maxdepth 1 -name "*.tf" -print
-
-      # Step 3: Verify Terraform installation
+      # Step 2: Verify Terraform installation
       - name: Check Terraform version
         run: terraform version
 
-      # Step 4: Terraform formatting check
+      # Step 3: Terraform formatting check
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
         continue-on-error: true
 
-      # Step 5: Initialize Terraform
+      # Step 4: Initialize Terraform
       - name: Terraform Init
         run: terraform init -input=false
 
-      # Step 6: Validate Terraform configuration
+      # Step 5: Validate Terraform configuration
       - name: Terraform Validate
         run: terraform validate
 
-      # Step 7: Generate Terraform plan
+      # Step 6: Generate Terraform plan
       - name: Terraform Plan
         run: terraform plan -input=false -no-color
 
