@@ -1,22 +1,14 @@
 
-
 name: Terraform Plan - Azure
 
 on:
   workflow_dispatch:
     inputs:
-      run_task:
-        description: "Select the task to run"
+      run_tasks:
+        description: "Enter tasks separated by commas: fmt, init, validate, plan, infracost, all"
         required: true
-        type: choice
-        default: plan
-        options:
-          - fmt
-          - init
-          - validate
-          - plan
-          - infracost
-          - all
+        type: string
+        default: "plan"
 
 permissions:
   contents: read
@@ -38,32 +30,74 @@ jobs:
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
     steps:
+      # Step 1: Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Step 2: Validate task selection
+      - name: Validate task selection
+        shell: pwsh
+        env:
+          RUN_TASKS: ${{ inputs.run_tasks }}
+        run: |
+          $allowed = @(
+            "fmt", "init", "validate",
+            "plan", "infracost", "all"
+          )
+
+          $selected = @(
+            $env:RUN_TASKS -split ',' |
+            ForEach-Object { $_.Trim().ToLower() } |
+            Where-Object { $_ -ne "" }
+          )
+
+          if ($selected.Count -eq 0) {
+            throw "Select at least one task."
+          }
+
+          if (($selected | Where-Object { $_ -eq "all" }).Count -gt 0 -and $selected.Count -gt 1) {
+            throw "'all' cannot be combined with other tasks."
+          }
+
+          $invalid = @(
+            $selected | Where-Object { $_ -notin $allowed }
+          )
+
+          if ($invalid.Count -gt 0) {
+            throw "Invalid task(s): $($invalid -join ', '). Allowed: $($allowed -join ', ')"
+          }
+
+          "Selected tasks: $($selected -join ',')"
+
+      # Step 3: Terraform version
       - name: Terraform Version
-        if: inputs.run_task == 'all'
+        if: contains(inputs.run_tasks, 'all')
         run: terraform version
 
+      # Step 4: Terraform format
       - name: Terraform Format Check
-        if: inputs.run_task == 'fmt' || inputs.run_task == 'all'
+        if: contains(inputs.run_tasks, 'fmt') || contains(inputs.run_tasks, 'all')
         run: terraform fmt -check -recursive
         continue-on-error: true
 
+      # Step 5: Terraform init
       - name: Terraform Init
-        if: inputs.run_task == 'init' || inputs.run_task == 'validate' || inputs.run_task == 'plan' || inputs.run_task == 'all'
+        if: contains(inputs.run_tasks, 'init') || contains(inputs.run_tasks, 'validate') || contains(inputs.run_tasks, 'plan') || contains(inputs.run_tasks, 'all')
         run: terraform init -input=false
 
+      # Step 6: Terraform validate
       - name: Terraform Validate
-        if: inputs.run_task == 'validate' || inputs.run_task == 'plan' || inputs.run_task == 'all'
+        if: contains(inputs.run_tasks, 'validate') || contains(inputs.run_tasks, 'plan') || contains(inputs.run_tasks, 'all')
         run: terraform validate
 
+      # Step 7: Terraform plan
       - name: Terraform Plan
-        if: inputs.run_task == 'plan' || inputs.run_task == 'all'
+        if: contains(inputs.run_tasks, 'plan') || contains(inputs.run_tasks, 'all')
         run: terraform plan -input=false -no-color
 
+      # Step 8: Infracost
       - name: Infracost Calculate Total
-        if: inputs.run_task == 'infracost' || inputs.run_task == 'all'
+        if: contains(inputs.run_tasks, 'infracost') || contains(inputs.run_tasks, 'all')
         env:
           INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
         run: infracost breakdown --path .
