@@ -64,6 +64,8 @@ jobs:
         run: terraform plan -input=false -no-color
 
       # Step 7: infracost calculate
-      - name: infracost calculate total
+      - name: Infracost Calculate Total
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
         run: infracost breakdown --path ./environments/preprod
 
