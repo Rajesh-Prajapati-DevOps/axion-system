@@ -17,6 +17,19 @@ on:
       - '.github/workflows/axion.yml'
 
   workflow_dispatch:
+    inputs:
+      run_task:
+        description: 'Select which task to run'
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - fmt
+          - init
+          - validate
+          - plan
+          - infracost
 
 permissions:
   contents: read
@@ -38,34 +51,35 @@ jobs:
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
     steps:
-      # Step 1: Checkout repository
+      
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Verify Terraform installation
-      - name: Check Terraform version
+      - name: Terraform Version
+        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all'
         run: terraform version
 
-      # Step 3: Terraform formatting check
       - name: Terraform Format Check
+        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'fmt'
         run: terraform fmt -check -recursive
         continue-on-error: true
 
-      # Step 4: Initialize Terraform
       - name: Terraform Init
+        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'init' || inputs.run_task == 'validate' || inputs.run_task == 'plan'
         run: terraform init -input=false
 
-      # Step 5: Validate Terraform configuration
       - name: Terraform Validate
+        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'validate' || inputs.run_task == 'plan'
         run: terraform validate
 
-      # Step 6: Generate Terraform plan
       - name: Terraform Plan
+        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'plan'
         run: terraform plan -input=false -no-color
 
-      # Step 7: infracost calculate
       - name: Infracost Calculate Total
+        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'infracost'
         env:
           INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
         run: infracost breakdown --path .
+
 
