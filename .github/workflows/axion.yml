@@ -60,11 +60,13 @@ jobs:
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
     steps:
+      # Step 1: Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Step 2: Validate task selection
       - name: Validate task selection
-        shell: pwsh
+        shell: powershell
         env:
           RUN_FMT: ${{ inputs.run_fmt }}
           RUN_INIT: ${{ inputs.run_init }}
@@ -86,27 +88,39 @@ jobs:
             throw "Select at least one task."
           }
 
+          if ($env:RUN_ALL -eq "true") {
+            Write-Host "All tasks selected."
+          } else {
+            Write-Host "Task selection validated successfully."
+          }
+
+      # Step 3: Terraform version
       - name: Terraform Version
         if: inputs.run_all || inputs.run_init || inputs.run_validate || inputs.run_plan
         run: terraform version
 
+      # Step 4: Terraform format check
       - name: Terraform Format Check
         if: inputs.run_all || inputs.run_fmt
         run: terraform fmt -check -recursive
         continue-on-error: true
 
+      # Step 5: Terraform init
       - name: Terraform Init
         if: inputs.run_all || inputs.run_init || inputs.run_validate || inputs.run_plan
         run: terraform init -input=false
 
+      # Step 6: Terraform validate
       - name: Terraform Validate
         if: inputs.run_all || inputs.run_validate || inputs.run_plan
         run: terraform validate
 
+      # Step 7: Terraform plan
       - name: Terraform Plan
         if: inputs.run_all || inputs.run_plan
         run: terraform plan -input=false -no-color
 
+      # Step 8: Infracost
       - name: Infracost Calculate Total
         if: inputs.run_all || inputs.run_infracost
         env:
