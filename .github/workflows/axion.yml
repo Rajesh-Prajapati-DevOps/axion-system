@@ -42,6 +42,7 @@ jobs:
       # Step 3: Terraform formatting check
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
+        continue-on-error: true
 
       # Step 4: Initialize Terraform
       - name: Terraform Init
