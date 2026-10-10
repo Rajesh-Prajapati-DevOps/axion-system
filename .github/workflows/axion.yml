@@ -1,43 +1,30 @@
 
+
 name: Terraform Plan - Azure
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'environments/preprod/**'
-      - '.github/workflows/axion.yml'
-
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'environments/preprod/**'
-      - '.github/workflows/axion.yml'
-
   workflow_dispatch:
     inputs:
       run_task:
-        description: 'Select which task to run'
+        description: "Select the task to run"
         required: true
         type: choice
-        default: all
+        default: plan
         options:
-          - all
           - fmt
           - init
           - validate
           - plan
           - infracost
+          - all
 
 permissions:
   contents: read
   id-token: write
 
 jobs:
-  terraform-plan:
-    name: Terraform Init, Validate and Plan
+  terraform:
+    name: Terraform and Infracost
     runs-on: self-hosted
 
     defaults:
@@ -51,35 +38,32 @@ jobs:
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
     steps:
-      
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Terraform Version
-        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all'
+        if: inputs.run_task == 'all'
         run: terraform version
 
       - name: Terraform Format Check
-        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'fmt'
+        if: inputs.run_task == 'fmt' || inputs.run_task == 'all'
         run: terraform fmt -check -recursive
         continue-on-error: true
 
       - name: Terraform Init
-        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'init' || inputs.run_task == 'validate' || inputs.run_task == 'plan'
+        if: inputs.run_task == 'init' || inputs.run_task == 'validate' || inputs.run_task == 'plan' || inputs.run_task == 'all'
         run: terraform init -input=false
 
       - name: Terraform Validate
-        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'validate' || inputs.run_task == 'plan'
+        if: inputs.run_task == 'validate' || inputs.run_task == 'plan' || inputs.run_task == 'all'
         run: terraform validate
 
       - name: Terraform Plan
-        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'plan'
+        if: inputs.run_task == 'plan' || inputs.run_task == 'all'
         run: terraform plan -input=false -no-color
 
       - name: Infracost Calculate Total
-        if: github.event_name != 'workflow_dispatch' || inputs.run_task == 'all' || inputs.run_task == 'infracost'
+        if: inputs.run_task == 'infracost' || inputs.run_task == 'all'
         env:
           INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
         run: infracost breakdown --path .
-
-
